@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Iron Cub — Quest Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#161A32;
+    --bg2:#1F2547;
+    --bg3:#262C55;
+    --gold:#FFB627;
+    --gold-dim:#7A5E23;
+    --teal:#2EC4B6;
+    --coral:#FF6B6B;
+    --cream:#F7F4EA;
+    --muted:#9098C4;
+    --border: rgba(255,255,255,0.08);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: radial-gradient(1200px 800px at 50% -10%, #232a52 0%, var(--bg) 55%);
+    color:var(--cream);
+    font-family:'Nunito', sans-serif;
+    min-height:100vh;
+    padding: 20px 16px 60px;
+    user-select:none;
+  }
+  h1,h2,h3, .display{
+    font-family:'Baloo 2', sans-serif;
+  }
+  .wrap{max-width:640px; margin:0 auto;}
+
+  /* HEADER / CHARACTER CARD */
+  .char-card{
+    background: linear-gradient(160deg, var(--bg2), var(--bg3));
+    border:1px solid var(--border);
+    border-radius:22px;
+    padding:20px 20px 18px;
+    position:relative;
+    overflow:hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .char-card::before{
+    content:"";
+    position:absolute; top:-60px; right:-60px;
+    width:180px; height:180px; border-radius:50%;
+    background: radial-gradient(circle, rgba(255,182,39,0.18), transparent 70%);
+  }
+  .char-top{display:flex; align-items:center; gap:14px;}
+  .avatar{
+    font-size:44px;
+    width:72px; height:72px;
+    display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(circle at 35% 30%, #33397a, #1a1e3c);
+    border-radius:20px;
+    border:2px solid var(--gold);
+    flex-shrink:0;
+  }
+  .char-info{flex:1; min-width:0;}
+  .char-title{
+    font-size:22px; font-weight:800; color:var(--gold);
+    line-height:1.15;
+  }
+  .char-sub{color:var(--muted); font-size:14px; font-weight:700; margin-top:2px;}
+  .streak-pill{
+    display:flex; align-items:center; gap:5px;
+    background: rgba(255,107,107,0.12);
+    border:1px solid rgba(255,107,107,0.35);
+    color:var(--coral);
+    font-weight:800; font-size:14px;
+    padding:6px 12px; border-radius:999px;
+    flex-shrink:0; white-space:nowrap;
+  }
+
+  .xp-row{margin-top:16px;}
+  .xp-labels{
+    display:flex; justify-content:space-between;
+    font-size:12px; color:var(--muted); font-weight:800;
+    margin-bottom:6px; letter-spacing:.03em;
+  }
+  .xp-track{
+    height:16px; border-radius:999px;
+    background: rgba(255,255,255,0.06);
+    border:1px solid var(--border);
+    overflow:hidden;
+  }
+  .xp-fill{
+    height:100%; border-radius:999px;
+    background: linear-gradient(90deg, #FFD066, var(--gold));
+    width:0%;
+    transition: width .6s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 0 12px rgba(255,182,39,0.5);
+  }
+
+  /* SECTION HEADERS */
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin: 26px 4px 10px;
+  }
+  .section-head h2{font-size:19px; margin:0; color:var(--cream);}
+  .section-head span{font-size:13px; color:var(--muted); font-weight:700;}
+
+  /* MISSION CARDS */
+  .mission{
+    display:flex; align-items:center; gap:14px;
+    background:var(--bg2);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:14px 14px;
+    margin-bottom:10px;
+    transition: transform .15s ease, opacity .2s ease;
+  }
+  .mission:active{transform: scale(0.98);}
+  .mission.done{
+    opacity:0.55;
+    border-color: rgba(46,196,182,0.4);
+  }
+  .m-emoji{
+    font-size:30px; width:48px; text-align:center; flex-shrink:0;
+  }
+  .m-text{flex:1; min-width:0;}
+  .m-name{font-weight:800; font-size:16px; line-height:1.2;}
+  .mission.done .m-name{text-decoration: line-through;}
+  .m-desc{font-size:13px; color:var(--muted); margin-top:2px; line-height:1.3;}
+  .m-xp{
+    font-size:12px; font-weight:800; color:var(--gold); margin-top:5px;
+  }
+  .check{
+    width:34px; height:34px; border-radius:50%;
+    border:2px solid var(--muted);
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; font-weight:900;
+    color:transparent;
+  }
+  .mission.done .check{
+    background: var(--teal); border-color:var(--teal); color:#0b2e2b;
+  }
+
+  /* BONUS QUEST */
+  .bonus-box{
+    background: linear-gradient(160deg, #2c2350, #241a44);
+    border:1px solid rgba(180,140,255,0.3);
+    border-radius:18px;
+    padding:18px;
+    text-align:center;
+  }
+  .bonus-card{
+    background: rgba(255,255,255,0.04);
+    border-radius:14px; padding:14px; margin-top:12px;
+    text-align:left;
+    display:flex; gap:12px; align-items:center;
+  }
+  .roll-btn, .complete-btn, .reset-btn{
+    font-family:'Baloo 2', sans-serif;
+    font-size:16px; font-weight:700;
+    border:none; border-radius:14px;
+    padding:14px 20px;
+    cursor:pointer;
+    width:100%;
+    color:#1a1330;
+    background: linear-gradient(180deg, #C9A6FF, #A87CFF);
+    box-shadow: 0 6px 0 #6D3FC9;
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .roll-btn:active, .complete-btn:active{
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #6D3FC9;
+  }
+  .complete-btn{
+    background: linear-gradient(180deg, #7CF0D8, #2EC4B6);
+    box-shadow: 0 6px 0 #1B8177;
+    margin-top:12px;
+  }
+  .roll-btn:disabled{
+    background: #3a3f66; box-shadow:none; color:var(--muted); cursor:default;
+  }
+
+  /* BADGES */
+  .badge-grid{
+    display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;
+  }
+  .badge{
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:16px; padding:12px 6px; text-align:center;
+  }
+  .badge.locked{opacity:0.3;}
+  .badge-emoji{font-size:26px;}
+  .badge-name{font-size:11px; font-weight:800; margin-top:4px; line-height:1.2;}
+
+  .footer-note{
+    text-align:center; color:var(--muted); font-size:12px; margin-top:30px;
+  }
+  .reset-link{
+    color:var(--muted); text-decoration:underline; font-size:12px; background:none; border:none; padding:0; margin-top:14px; width:auto; box-shadow:none;
+  }
+
+  /* LEVEL UP MODAL */
+  .overlay{
+    position:fixed; inset:0; background:rgba(10,10,25,0.75);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; opacity:0; pointer-events:none; transition:opacity .3s ease;
+  }
+  .overlay.show{opacity:1; pointer-events:auto;}
+  .levelup-card{
+    background: linear-gradient(160deg, #2c2560, #1c1a3d);
+    border:2px solid var(--gold);
+    border-radius:24px;
+    padding:30px 26px;
+    text-align:center;
+    max-width:300px;
+    transform: scale(0.7); transition: transform .35s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 0 60px rgba(255,182,39,0.35);
+  }
+  .overlay.show .levelup-card{transform:scale(1);}
+  .levelup-card .big-emoji{font-size:60px;}
+  .levelup-card h2{color:var(--gold); font-size:26px; margin:6px 0 2px;}
+  .levelup-card p{color:var(--cream); font-size:15px; margin:4px 0 18px;}
+  .levelup-card button{
+    font-family:'Baloo 2'; font-weight:700; border:none; border-radius:14px;
+    padding:12px 26px; background:var(--gold); color:#3a2400; box-shadow:0 5px 0 #7A5E23;
+  }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--teal); color:#0b2e2b; font-weight:800;
+    padding:12px 20px; border-radius:14px; font-size:14px;
+    opacity:0; transition: all .3s ease; z-index:60; white-space:nowrap;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="char-card">
+    <div class="char-top">
+      <div class="avatar" id="avatarEmoji">🥋</div>
+      <div class="char-info">
+        <div class="char-title" id="levelTitle">Rookie Ninja</div>
+        <div class="char-sub" id="levelSub">Level 1</div>
+      </div>
+      <div class="streak-pill">🔥 <span id="streakCount">0</span></div>
+    </div>
+    <div class="xp-row">
+      <div class="xp-labels">
+        <span id="xpNow">0 XP</span>
+        <span id="xpNext">100 XP to next level</span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <h2 id="dayName">Today's Quests</h2>
+    <span id="questProgress">0 / 4</span>
+  </div>
+  <div id="missionList"></div>
+
+  <div class="section-head"><h2>Bonus Quest</h2></div>
+  <div class="bonus-box">
+    <div id="bonusIdle">
+      <div style="font-size:34px;">🎲</div>
+      <p style="margin:8px 0 14px; color:var(--muted); font-weight:700; font-size:14px;">Roll for a surprise challenge!</p>
+      <button class="roll-btn" id="rollBtn">Roll Bonus Quest</button>
+    </div>
+    <div id="bonusCard" style="display:none;">
+      <div class="bonus-card">
+        <div class="m-emoji" id="bonusEmoji">⭐</div>
+        <div class="m-text">
+          <div class="m-name" id="bonusName"></div>
+          <div class="m-desc" id="bonusDesc"></div>
+          <div class="m-xp" id="bonusXp"></div>
+        </div>
+      </div>
+      <button class="complete-btn" id="bonusCompleteBtn">Mark Complete</button>
+    </div>
+    <div id="bonusDone" style="display:none;">
+      <div style="font-size:34px;">✅</div>
+      <p style="margin:8px 0 0; color:var(--muted); font-weight:700; font-size:14px;">Bonus quest done! Come back tomorrow.</p>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Badges</h2></div>
+  <div class="badge-grid" id="badgeGrid"></div>
+
+  <div class="footer-note">
+    Iron Cub Quest Log — built to level you up 🐾
+    <br><button class="reset-link" id="resetBtn">Reset all progress</button>
+  </div>
+</div>
+
+<div class="overlay" id="levelOverlay">
+  <div class="levelup-card">
+    <div class="big-emoji" id="luEmoji">🥷</div>
+    <h2>LEVEL UP!</h2>
+    <p id="luText">You reached Level 2</p>
+    <button id="luCloseBtn">Nice!</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'ironcub-state-v1';
+
+  const LEVELS = [
+    {level:1, title:"Rookie Ninja", emoji:"🥋", floor:0},
+    {level:2, title:"Junior Warrior", emoji:"⚡", floor:100},
+    {level:3, title:"Rising Fox", emoji:"🦊", floor:250},
+    {level:4, title:"Iron Cub", emoji:"🐯", floor:450},
+    {level:5, title:"Storm Runner", emoji:"🌪️", floor:700},
+    {level:6, title:"Shadow Striker", emoji:"🥷", floor:1000},
+    {level:7, title:"Dragon Apprentice", emoji:"🐉", floor:1400},
+    {level:8, title:"Night Champion", emoji:"🏆", floor:1900},
+    {level:9, title:"Legend in Training", emoji:"🌟", floor:2500},
+    {level:10, title:"Iron Cub Legend", emoji:"👑", floor:3200}
+  ];
+
+  const MISSIONS_BY_DAY = {
+    1: {label:"Strength Quests 💪", list:[
+      {id:"mon1", emoji:"🐻", name:"Bear Crawl Race", desc:"Bear crawl across the yard and back, 3 times.", xp:15},
+      {id:"mon2", emoji:"🛒", name:"Wheelbarrow Walk", desc:"Grown-up holds your ankles — walk on your hands across the yard.", xp:15},
+      {id:"mon3", emoji:"🏗️", name:"Plank Power", desc:"Hold a plank while counting to 30.", xp:15},
+      {id:"mon4", emoji:"🧱", name:"Push-Up Push", desc:"How many wall or knee push-ups can you do? Beat your last score!", xp:15}
+    ]},
+    2: {label:"Speed Quests ⚡", list:[
+      {id:"tue1", emoji:"🏃", name:"Yard Dash", desc:"Sprint across the yard as fast as you can, 4 times.", xp:15},
+      {id:"tue2", emoji:"🔁", name:"Shuttle Runner", desc:"Set two markers — how many round trips in 30 seconds?", xp:15},
+      {id:"tue3", emoji:"🎯", name:"Reaction Tag", desc:"Play a round of tag — juke and dodge!", xp:15},
+      {id:"tue4", emoji:"🌈", name:"Color Sprint", desc:"Someone calls a color — sprint and touch something that color.", xp:15}
+    ]},
+    3: {label:"Agility Quests 🌀", list:[
+      {id:"wed1", emoji:"🪜", name:"Ladder Steps", desc:"Run through the agility ladder 3 times.", xp:15},
+      {id:"wed2", emoji:"🚧", name:"Cone Weave", desc:"Weave through the cones without knocking any down.", xp:15},
+      {id:"wed3", emoji:"🌋", name:"Lava Floor", desc:"Cross the yard without touching the ground — it's lava!", xp:15},
+      {id:"wed4", emoji:"🎪", name:"Balance Beam", desc:"Walk the line forward, then backward, then hop it.", xp:15}
+    ]},
+    4: {label:"Balance Quests 🎯", list:[
+      {id:"thu1", emoji:"🦩", name:"Flamingo Stand", desc:"Stand on one leg for 20 seconds — now try with eyes closed!", xp:15},
+      {id:"thu2", emoji:"🤹", name:"Bean Bag Juggle", desc:"Try to juggle 2 bean bags or scarves.", xp:15},
+      {id:"thu3", emoji:"⚾", name:"Wall Ball Catch", desc:"Bounce a ball off the wall and catch it 10 times in a row.", xp:15},
+      {id:"thu4", emoji:"🎡", name:"Hula Hoop Trick", desc:"Keep the hula hoop going as long as you can.", xp:15}
+    ]},
+    5: {label:"Jump Quests 🚀", list:[
+      {id:"fri1", emoji:"📏", name:"Long Jump Record", desc:"Standing long jump — mark it with tape. Beat your record!", xp:15},
+      {id:"fri2", emoji:"🪢", name:"Jump Rope Rally", desc:"Jump rope (or jump your shadow) 20 times without stopping.", xp:15},
+      {id:"fri3", emoji:"📦", name:"Box Jump", desc:"Jump up onto a low step or cushion, 10 times.", xp:15},
+      {id:"fri4", emoji:"🐸", name:"Frog Hops", desc:"Frog jump across the yard and back.", xp:15}
+    ]},
+    6: {label:"Obstacle Course Quests 🏆", list:[
+      {id:"sat1", emoji:"🛠️", name:"Design Your Course", desc:"Build your own obstacle course with 4 stations.", xp:20},
+      {id:"sat2", emoji:"⏱️", name:"Beat the Clock", desc:"Run your course and time yourself.", xp:20},
+      {id:"sat3", emoji:"🤝", name:"Buddy Battle", desc:"Race someone through your course.", xp:20},
+      {id:"sat4", emoji:"🔄", name:"Course Remix", desc:"Make one station harder, then run it again.", xp:20}
+    ]},
+    0: {label:"Recovery Quests 🧘", list:[
+      {id:"sun1", emoji:"📖", name:"Stretch Story", desc:"Stretch for 5 minutes while telling a story about your week.", xp:10},
+      {id:"sun2", emoji:"🧘", name:"Animal Yoga", desc:"Try Downward Dog, Cobra, and Cat-Cow poses.", xp:10},
+      {id:"sun3", emoji:"🍃", name:"Slow Walk Explore", desc:"Take a slow walk and spot 5 cool things.", xp:10},
+      {id:"sun4", emoji:"💭", name:"Rest & Reflect", desc:"Tell someone your favorite quest from this week.", xp:10}
+    ]}
+  };
+
+  const BONUS_POOL = [
+    {emoji:"⚽", name:"Crab Walk Soccer", desc:"Kick a ball back and forth while crab walking.", xp:25},
+    {emoji:"🐾", name:"Animal Walk Relay", desc:"Frog, bear, crab, then duck walk across the yard.", xp:25},
+    {emoji:"🦆", name:"Duck Walk Derby", desc:"Duck walk race across the yard.", xp:25},
+    {emoji:"🦸", name:"Superhero Landings", desc:"Jump and stick a superhero landing, 10 times.", xp:25},
+    {emoji:"🤸", name:"Ninja Roll", desc:"Practice a safe forward roll on the grass.", xp:25},
+    {emoji:"🌀", name:"Cartwheel Practice", desc:"Practice cartwheels — how many in a row?", xp:25},
+    {emoji:"🥏", name:"Around-the-World Toss", desc:"Toss and catch a ball in different positions.", xp:25},
+    {emoji:"🎯", name:"Mystery Sprint", desc:"Someone points — sprint to that object and back.", xp:25},
+    {emoji:"🤫", name:"Silent Ninja Steps", desc:"Cross the yard as quietly as a ninja.", xp:25},
+    {emoji:"🥤", name:"Speed Stack", desc:"Stack and unstack cups as fast as you can.", xp:25},
+    {emoji:"💃", name:"Freeze Dance Fitness", desc:"Dance, then freeze in a plank or squat when the music stops.", xp:25},
+    {emoji:"🗺️", name:"Backyard Treasure Hunt", desc:"Go on a movement-based scavenger hunt.", xp:25}
+  ];
+
+  const BADGES = [
+    {id:"first", emoji:"🎉", name:"First Quest", check:s=>s.totalMissions>=1},
+    {id:"spark", emoji:"✨", name:"Spark (3-Day Streak)", check:s=>s.bestStreak>=3},
+    {id:"flame", emoji:"🔥", name:"Flame (7-Day Streak)", check:s=>s.bestStreak>=7},
+    {id:"wildfire", emoji:"🌋", name:"Wildfire (14-Day Streak)", check:s=>s.bestStreak>=14},
+    {id:"lvl3", emoji:"🦊", name:"Rising Fox (Level 3)", check:s=>getLevelInfo(s.xp).level>=3},
+    {id:"lvl5", emoji:"🌪️", name:"Storm Runner (Level 5)", check:s=>getLevelInfo(s.xp).level>=5},
+    {id:"century", emoji:"💯", name:"Century Club (100 Quests)", check:s=>s.totalMissions>=100},
+    {id:"bonushunter", emoji:"🎲", name:"Bonus Hunter (10 Rolls)", check:s=>s.totalBonus>=10}
+  ];
+
+  function todayStr(d){ d = d || new Date(); return d.toISOString().slice(0,10); }
+  function addDays(dateStr, n){
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate()+n);
+    return todayStr(d);
+  }
+
+  function defaultState(){
+    return {
+      xp:0,
+      streak:0,
+      bestStreak:0,
+      lastStreakDate:null,
+      totalMissions:0,
+      totalBonus:0,
+      earnedBadges:[],
+      today: todayStr(),
+      completedToday: [],
+      bonusToday: null,
+      bonusCompletedToday:false
+    };
+  }
+
+  let state = null;
+
+  async function loadState(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      state = res && res.value ? JSON.parse(res.value) : defaultState();
+    }catch(e){
+      state = defaultState();
+    }
+    handleDayRollover();
+    render();
+  }
+
+  async function saveState(){
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+    catch(e){ console.error('save failed', e); }
+  }
+
+  function handleDayRollover(){
+    const t = todayStr();
+    if(state.today !== t){
+      // check if streak should be considered broken (missed a full day)
+      if(state.lastStreakDate && state.lastStreakDate !== t && state.lastStreakDate !== addDays(t,-1)){
+        state.streak = 0;
+      }
+      state.today = t;
+      state.completedToday = [];
+      state.bonusToday = null;
+      state.bonusCompletedToday = false;
+    }
+  }
+
+  function getLevelInfo(xp){
+    let current = LEVELS[0];
+    for(const lvl of LEVELS){
+      if(xp >= lvl.floor) current = lvl; else break;
+    }
+    const idx = LEVELS.indexOf(current);
+    const next = LEVELS[idx+1] || null;
+    return {
+      level: current.level, title: current.title, emoji: current.emoji,
+      floor: current.floor, nextFloor: next ? next.floor : null, isMax: !next
+    };
+  }
+
+  function getDayMissions(){
+    const dow = new Date().getDay();
+    return MISSIONS_BY_DAY[dow];
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+
+  function checkBadges(){
+    let newlyEarned = [];
+    for(const b of BADGES){
+      if(!state.earnedBadges.includes(b.id) && b.check(state)){
+        state.earnedBadges.push(b.id);
+        newlyEarned.push(b);
+      }
+    }
+    return newlyEarned;
+  }
+
+  function maybeLevelUp(prevXp, newXp){
+    const before = getLevelInfo(prevXp);
+    const after = getLevelInfo(newXp);
+    if(after.level > before.level){
+      showLevelUp(after);
+    }
+  }
+
+  function showLevelUp(info){
+    document.getElementById('luEmoji').textContent = info.emoji;
+    document.getElementById('luText').textContent = `You reached Level ${info.level}: ${info.title}!`;
+    document.getElementById('levelOverlay').classList.add('show');
+  }
+
+  function checkAllDailyDone(){
+    const day = getDayMissions();
+    return day.list.every(m => state.completedToday.includes(m.id));
+  }
+
+  function updateStreakIfComplete(){
+    if(!checkAllDailyDone()) return;
+    const t = state.today;
+    if(state.lastStreakDate === t) return; // already counted today
+    const yesterday = addDays(t, -1);
+    if(state.lastStreakDate === yesterday){
+      state.streak += 1;
+    } else {
+      state.streak = 1;
+    }
+    state.lastStreakDate = t;
+    if(state.streak > state.bestStreak) state.bestStreak = state.streak;
+  }
+
+  async function toggleMission(id, xp){
+    if(state.completedToday.includes(id)) return; // one-way complete
+    const prevXp = state.xp;
+    state.completedToday.push(id);
+    state.xp += xp;
+    state.totalMissions += 1;
+    updateStreakIfComplete();
+    const newBadges = checkBadges();
+    await saveState();
+    render();
+    maybeLevelUp(prevXp, state.xp);
+    if(newBadges.length){
+      newBadges.forEach(b=> showToast(`Badge earned: ${b.name}!`));
+    } else {
+      showToast(`+${xp} XP!`);
+    }
+  }
+
+  async function rollBonus(){
+    if(state.bonusToday) return;
+    const pick = BONUS_POOL[Math.floor(Math.random()*BONUS_POOL.length)];
+    state.bonusToday = pick;
+    await saveState();
+    render();
+  }
+
+  async function completeBonus(){
+    if(!state.bonusToday || state.bonusCompletedToday) return;
+    const prevXp = state.xp;
+    state.xp += state.bonusToday.xp;
+    state.totalBonus += 1;
+    state.bonusCompletedToday = true;
+    const newBadges = checkBadges();
+    await saveState();
+    render();
+    maybeLevelUp(prevXp, state.xp);
+    if(newBadges.length){
+      newBadges.forEach(b=> showToast(`Badge earned: ${b.name}!`));
+    } else {
+      showToast(`+${state.bonusToday.xp} Bonus XP!`);
+    }
+  }
+
+  async function resetProgress(){
+    if(!confirm('Reset all progress? This cannot be undone.')) return;
+    state = defaultState();
+    await saveState();
+    render();
+  }
+
+  function render(){
+    const info = getLevelInfo(state.xp);
+    document.getElementById('avatarEmoji').textContent = info.emoji;
+    document.getElementById('levelTitle').textContent = info.title;
+    document.getElementById('levelSub').textContent = `Level ${info.level}`;
+    document.getElementById('streakCount').textContent = state.streak;
+    document.getElementById('xpNow').textContent = `${state.xp} XP`;
+
+    if(info.isMax){
+      document.getElementById('xpNext').textContent = 'Max Level!';
+      document.getElementById('xpFill').style.width = '100%';
+    } else {
+      const span = info.nextFloor - info.floor;
+      const progress = state.xp - info.floor;
+      const pct = Math.max(2, Math.min(100, Math.round((progress/span)*100)));
+      document.getElementById('xpNext').textContent = `${info.nextFloor - state.xp} XP to next level`;
+      document.getElementById('xpFill').style.width = pct + '%';
+    }
+
+    const day = getDayMissions();
+    document.getElementById('dayName').textContent = day.label;
+    const doneCount = day.list.filter(m=>state.completedToday.includes(m.id)).length;
+    document.getElementById('questProgress').textContent = `${doneCount} / ${day.list.length}`;
+
+    const listEl = document.getElementById('missionList');
+    listEl.innerHTML = '';
+    day.list.forEach(m=>{
+      const done = state.completedToday.includes(m.id);
+      const div = document.createElement('div');
+      div.className = 'mission' + (done ? ' done':'');
+      div.innerHTML = `
+        <div class="m-emoji">${m.emoji}</div>
+        <div class="m-text">
+          <div class="m-name">${m.name}</div>
+          <div class="m-desc">${m.desc}</div>
+          <div class="m-xp">+${m.xp} XP</div>
+        </div>
+        <div class="check">${done ? '✓' : ''}</div>
+      `;
+      div.addEventListener('click', ()=> toggleMission(m.id, m.xp));
+      listEl.appendChild(div);
+    });
+
+    // bonus section
+    const idle = document.getElementById('bonusIdle');
+    const card = document.getElementById('bonusCard');
+    const doneBox = document.getElementById('bonusDone');
+    if(state.bonusCompletedToday){
+      idle.style.display='none'; card.style.display='none'; doneBox.style.display='block';
+    } else if(state.bonusToday){
+      idle.style.display='none'; doneBox.style.display='none'; card.style.display='block';
+      document.getElementById('bonusEmoji').textContent = state.bonusToday.emoji;
+      document.getElementById('bonusName').textContent = state.bonusToday.name;
+      document.getElementById('bonusDesc').textContent = state.bonusToday.desc;
+      document.getElementById('bonusXp').textContent = `+${state.bonusToday.xp} XP`;
+    } else {
+      idle.style.display='block'; card.style.display='none'; doneBox.style.display='none';
+    }
+
+    // badges
+    const grid = document.getElementById('badgeGrid');
+    grid.innerHTML = '';
+    BADGES.forEach(b=>{
+      const earned = state.earnedBadges.includes(b.id);
+      const div = document.createElement('div');
+      div.className = 'badge' + (earned ? '' : ' locked');
+      div.innerHTML = `<div class="badge-emoji">${b.emoji}</div><div class="badge-name">${b.name}</div>`;
+      grid.appendChild(div);
+    });
+  }
+
+  document.getElementById('rollBtn').addEventListener('click', rollBonus);
+  document.getElementById('bonusCompleteBtn').addEventListener('click', completeBonus);
+  document.getElementById('resetBtn').addEventListener('click', resetProgress);
+  document.getElementById('luCloseBtn').addEventListener('click', ()=>{
+    document.getElementById('levelOverlay').classList.remove('show');
+  });
+
+  loadState();
+})();
+</script>
+</body>
+</html>
