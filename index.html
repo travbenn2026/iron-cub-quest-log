@@ -650,6 +650,25 @@
   });
 
   loadState();
+
+  // Re-check for day rollover any time the app becomes visible again.
+  // iOS keeps home-screen web apps alive in memory when backgrounded,
+  // so without this, a new day won't be detected until a full reload.
+  async function recheckDay(){
+    if(!state) return;
+    const before = state.today;
+    handleDayRollover();
+    if(state.today !== before){
+      await saveState();
+    }
+    render();
+  }
+
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') recheckDay();
+  });
+  window.addEventListener('pageshow', recheckDay);
+  window.addEventListener('focus', recheckDay);
 })();
 </script>
 </body>
