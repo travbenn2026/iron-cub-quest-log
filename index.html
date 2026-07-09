@@ -424,8 +424,8 @@
 
   async function loadState(){
     try{
-      const res = await window.storage.get(STORAGE_KEY, false);
-      state = res && res.value ? JSON.parse(res.value) : defaultState();
+      const raw = localStorage.getItem(STORAGE_KEY);
+      state = raw ? JSON.parse(raw) : defaultState();
     }catch(e){
       state = defaultState();
     }
@@ -434,7 +434,7 @@
   }
 
   async function saveState(){
-    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(state), false); }
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
     catch(e){ console.error('save failed', e); }
   }
 
