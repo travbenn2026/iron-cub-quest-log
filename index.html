@@ -57,13 +57,21 @@
   }
   .char-top{display:flex; align-items:center; gap:14px;}
   .avatar{
-    font-size:44px;
     width:72px; height:72px;
-    display:flex; align-items:center; justify-content:center;
     background: radial-gradient(circle at 35% 30%, #33397a, #1a1e3c);
     border-radius:20px;
     border:2px solid var(--gold);
     flex-shrink:0;
+    overflow:hidden;
+    position:relative;
+  }
+  .avatar video{
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+  .avatar #avatarEmojiFallback{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:38px;
   }
   .char-info{flex:1; min-width:0;}
   .char-title{
@@ -222,6 +230,11 @@
     box-shadow: 0 0 60px rgba(255,182,39,0.35);
   }
   .overlay.show .levelup-card{transform:scale(1);}
+  .celebration-video{
+    width:100%; max-width:240px; border-radius:16px; margin-bottom:6px;
+    display:block; margin-left:auto; margin-right:auto;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
   .levelup-card .big-emoji{font-size:60px;}
   .levelup-card h2{color:var(--gold); font-size:26px; margin:6px 0 2px;}
   .levelup-card p{color:var(--cream); font-size:15px; margin:4px 0 18px;}
@@ -244,7 +257,12 @@
 
   <div class="char-card">
     <div class="char-top">
-      <div class="avatar" id="avatarEmoji">🥋</div>
+      <div class="avatar" id="avatarBox">
+        <video id="avatarVideo" autoplay muted loop playsinline poster="media/idle-rest-poster.jpg">
+          <source src="media/idle-rest.mp4" type="video/mp4">
+        </video>
+        <div id="avatarEmojiFallback" style="display:none;">🥋</div>
+      </div>
       <div class="char-info">
         <div class="char-title" id="levelTitle">Rookie Ninja</div>
         <div class="char-sub" id="levelSub">Level 1</div>
@@ -272,6 +290,11 @@
       <div style="font-size:34px;">🎲</div>
       <p style="margin:8px 0 14px; color:var(--muted); font-weight:700; font-size:14px;">Roll for a surprise challenge!</p>
       <button class="roll-btn" id="rollBtn">Roll Bonus Quest</button>
+    </div>
+    <div id="bonusRolling" style="display:none;">
+      <video id="bonusRollVideo" class="celebration-video" muted playsinline poster="media/bonus-roll-poster.jpg">
+        <source src="media/bonus-roll.mp4" type="video/mp4">
+      </video>
     </div>
     <div id="bonusCard" style="display:none;">
       <div class="bonus-card">
@@ -301,10 +324,23 @@
 
 <div class="overlay" id="levelOverlay">
   <div class="levelup-card">
-    <div class="big-emoji" id="luEmoji">🥷</div>
+    <video id="luVideo" class="celebration-video" muted playsinline poster="media/level-up-poster.jpg">
+      <source src="media/level-up.mp4" type="video/mp4">
+    </video>
     <h2>LEVEL UP!</h2>
     <p id="luText">You reached Level 2</p>
     <button id="luCloseBtn">Nice!</button>
+  </div>
+</div>
+
+<div class="overlay" id="dailyOverlay">
+  <div class="levelup-card">
+    <video id="dailyVideo" class="celebration-video" muted playsinline>
+      <source id="dailyVideoSrc" src="" type="video/mp4">
+    </video>
+    <h2 id="dailyTitle">Quest Complete!</h2>
+    <p id="dailyText">All of today's quests are done!</p>
+    <button id="dailyCloseBtn">Awesome!</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -494,18 +530,39 @@
     return newlyEarned;
   }
 
-  function maybeLevelUp(prevXp, newXp){
-    const before = getLevelInfo(prevXp);
-    const after = getLevelInfo(newXp);
-    if(after.level > before.level){
-      showLevelUp(after);
-    }
+  let overlayQueue = [];
+  function showNextInQueue(){
+    if(overlayQueue.length === 0) return;
+    const next = overlayQueue.shift();
+    next();
   }
 
   function showLevelUp(info){
-    document.getElementById('luEmoji').textContent = info.emoji;
     document.getElementById('luText').textContent = `You reached Level ${info.level}: ${info.title}!`;
+    const vid = document.getElementById('luVideo');
     document.getElementById('levelOverlay').classList.add('show');
+    try{ vid.currentTime = 0; vid.play().catch(()=>{}); }catch(e){}
+  }
+
+  function showDailyComplete(isStreakDay, streakCount){
+    const vid = document.getElementById('dailyVideo');
+    const src = document.getElementById('dailyVideoSrc');
+    const title = document.getElementById('dailyTitle');
+    const text = document.getElementById('dailyText');
+    if(isStreakDay){
+      src.src = 'media/daily-thumbsup.mp4';
+      vid.setAttribute('poster', 'media/daily-thumbsup-poster.jpg');
+      title.textContent = 'Streak Continues!';
+      text.textContent = `${streakCount} days in a row — keep it going!`;
+    } else {
+      src.src = 'media/daily-bow.mp4';
+      vid.setAttribute('poster', 'media/daily-bow-poster.jpg');
+      title.textContent = 'Quest Complete!';
+      text.textContent = `All of today's quests are done. Nice work!`;
+    }
+    vid.load();
+    document.getElementById('dailyOverlay').classList.add('show');
+    try{ vid.play().catch(()=>{}); }catch(e){}
   }
 
   function checkAllDailyDone(){
@@ -514,9 +571,9 @@
   }
 
   function updateStreakIfComplete(){
-    if(!checkAllDailyDone()) return;
+    if(!checkAllDailyDone()) return null;
     const t = state.today;
-    if(state.lastStreakDate === t) return; // already counted today
+    if(state.lastStreakDate === t) return null; // already counted/celebrated today
     const yesterday = addDays(t, -1);
     if(state.lastStreakDate === yesterday){
       state.streak += 1;
@@ -525,6 +582,7 @@
     }
     state.lastStreakDate = t;
     if(state.streak > state.bestStreak) state.bestStreak = state.streak;
+    return { justCompleted:true, isStreakDay: state.streak >= 2 };
   }
 
   async function toggleMission(id, xp){
@@ -533,11 +591,25 @@
     state.completedToday.push(id);
     state.xp += xp;
     state.totalMissions += 1;
-    updateStreakIfComplete();
+    const streakInfo = updateStreakIfComplete();
     const newBadges = checkBadges();
     await saveState();
     render();
-    maybeLevelUp(prevXp, state.xp);
+
+    const before = getLevelInfo(prevXp);
+    const after = getLevelInfo(state.xp);
+    const leveledUp = after.level > before.level;
+
+    const queue = [];
+    if(streakInfo && streakInfo.justCompleted){
+      queue.push(()=> showDailyComplete(streakInfo.isStreakDay, state.streak));
+    }
+    if(leveledUp){
+      queue.push(()=> showLevelUp(after));
+    }
+    overlayQueue = queue;
+    showNextInQueue();
+
     if(newBadges.length){
       newBadges.forEach(b=> showToast(`Badge earned: ${b.name}!`));
     } else {
@@ -547,10 +619,23 @@
 
   async function rollBonus(){
     if(state.bonusToday) return;
+    document.getElementById('bonusIdle').style.display = 'none';
+    const rollingBox = document.getElementById('bonusRolling');
+    rollingBox.style.display = 'block';
+    const vid = document.getElementById('bonusRollVideo');
     const pick = BONUS_POOL[Math.floor(Math.random()*BONUS_POOL.length)];
-    state.bonusToday = pick;
-    await saveState();
-    render();
+    let revealed = false;
+    const reveal = async ()=>{
+      if(revealed) return;
+      revealed = true;
+      rollingBox.style.display = 'none';
+      state.bonusToday = pick;
+      await saveState();
+      render();
+    };
+    vid.addEventListener('ended', reveal, {once:true});
+    try{ vid.currentTime = 0; await vid.play(); }catch(e){ /* autoplay blocked, fall through to timeout */ }
+    setTimeout(reveal, 3200); // fallback in case 'ended' never fires
   }
 
   async function completeBonus(){
@@ -562,7 +647,14 @@
     const newBadges = checkBadges();
     await saveState();
     render();
-    maybeLevelUp(prevXp, state.xp);
+
+    const before = getLevelInfo(prevXp);
+    const after = getLevelInfo(state.xp);
+    if(after.level > before.level){
+      overlayQueue = [()=> showLevelUp(after)];
+      showNextInQueue();
+    }
+
     if(newBadges.length){
       newBadges.forEach(b=> showToast(`Badge earned: ${b.name}!`));
     } else {
@@ -579,7 +671,6 @@
 
   function render(){
     const info = getLevelInfo(state.xp);
-    document.getElementById('avatarEmoji').textContent = info.emoji;
     document.getElementById('levelTitle').textContent = info.title;
     document.getElementById('levelSub').textContent = `Level ${info.level}`;
     document.getElementById('streakCount').textContent = state.streak;
@@ -622,8 +713,10 @@
 
     // bonus section
     const idle = document.getElementById('bonusIdle');
+    const rolling = document.getElementById('bonusRolling');
     const card = document.getElementById('bonusCard');
     const doneBox = document.getElementById('bonusDone');
+    rolling.style.display = 'none';
     if(state.bonusCompletedToday){
       idle.style.display='none'; card.style.display='none'; doneBox.style.display='block';
     } else if(state.bonusToday){
@@ -652,7 +745,22 @@
   document.getElementById('bonusCompleteBtn').addEventListener('click', completeBonus);
   document.getElementById('resetBtn').addEventListener('click', resetProgress);
   document.getElementById('luCloseBtn').addEventListener('click', ()=>{
+    const vid = document.getElementById('luVideo');
+    try{ vid.pause(); vid.currentTime = 0; }catch(e){}
     document.getElementById('levelOverlay').classList.remove('show');
+    showNextInQueue();
+  });
+  document.getElementById('dailyCloseBtn').addEventListener('click', ()=>{
+    const vid = document.getElementById('dailyVideo');
+    try{ vid.pause(); vid.currentTime = 0; }catch(e){}
+    document.getElementById('dailyOverlay').classList.remove('show');
+    showNextInQueue();
+  });
+
+  // If the idle avatar video fails to load, fall back to a simple emoji
+  document.getElementById('avatarVideo').addEventListener('error', ()=>{
+    document.getElementById('avatarVideo').style.display = 'none';
+    document.getElementById('avatarEmojiFallback').style.display = 'flex';
   });
 
   loadState();
